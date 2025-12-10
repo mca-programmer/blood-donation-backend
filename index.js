@@ -143,6 +143,36 @@ app.put("/api/users/:id", protect, async (req, res) => {
   res.json(user);
 });
 
+// --------- Donation Requests ---------
+app.get("/api/donation-requests", async (req, res) => {
+  const requests = await DonationRequest.find().populate("requester", "name email");
+  res.json(requests);
+});
+app.get("/api/donation-requests/my", protect, async (req, res) => {
+  const requests = await DonationRequest.find({ requester: req.user._id });
+  res.json(requests);
+});
+app.post("/api/donation-requests", protect, async (req, res) => {
+  if (req.user.status !== "active") return res.status(403).json({ message: "Blocked users cannot create requests" });
+  const request = await DonationRequest.create({ ...req.body, requester: req.user._id });
+  res.status(201).json(request);
+});
+app.put("/api/donation-requests/:id", protect, async (req, res) => {
+  const request = await DonationRequest.findById(req.params.id);
+  if (!request) return res.status(404).json({ message: "Request not found" });
+
+  Object.assign(request, req.body);
+  await request.save();
+  res.json(request);
+});
+app.delete("/api/donation-requests/:id", protect, async (req, res) => {
+  const request = await DonationRequest.findById(req.params.id);
+  if (!request) return res.status(404).json({ message: "Request not found" });
+
+  await request.remove();
+  res.json({ message: "Request deleted" });
+});
+
 
 
 // ===================== SERVER =====================
