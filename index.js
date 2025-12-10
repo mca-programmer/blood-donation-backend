@@ -173,6 +173,16 @@ app.delete("/api/donation-requests/:id", protect, async (req, res) => {
   res.json({ message: "Request deleted" });
 });
 
+// --------- Funds ---------
+app.get("/api/funds", protect, async (req, res) => {
+  const funds = await Fund.find().sort({ createdAt: -1 });
+  res.json(funds);
+});
+app.post("/api/funds", protect, async (req, res) => {
+  const { amount } = req.body;
+  const fund = await Fund.create({ user: req.user._id, userName: req.user.name, amount });
+  res.status(201).json(fund);
+});
 
 
 // ===================== SERVER =====================
