@@ -106,6 +106,13 @@ app.post("/api/auth/login", async (req, res) => {
   res.json({ token, user });
 });
 
+// --------- User Routes ---------
+app.get("/api/users", protect, async (req, res) => {
+  const users = await User.find().select("-password");
+  res.json(users);
+});
+
+
 
 // ===================== SERVER =====================
 const PORT = process.env.PORT || 5000;
