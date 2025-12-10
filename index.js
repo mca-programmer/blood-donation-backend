@@ -112,6 +112,37 @@ app.get("/api/users", protect, async (req, res) => {
   res.json(users);
 });
 
+// Status, role, update
+app.put("/api/users/:id/status", protect, async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (!user) return res.status(404).json({ message: "User not found" });
+  user.status = user.status === "active" ? "blocked" : "active";
+  await user.save();
+  res.json(user);
+});
+app.put("/api/users/:id/role", protect, async (req, res) => {
+  const { role } = req.body;
+  const user = await User.findById(req.params.id);
+  if (!user) return res.status(404).json({ message: "User not found" });
+  user.role = role;
+  await user.save();
+  res.json(user);
+});
+app.put("/api/users/:id", protect, async (req, res) => {
+  const { name, avatar, bloodGroup, district, upazila } = req.body;
+  const user = await User.findById(req.params.id);
+  if (!user) return res.status(404).json({ message: "User not found" });
+
+  user.name = name || user.name;
+  user.avatar = avatar || user.avatar;
+  user.bloodGroup = bloodGroup || user.bloodGroup;
+  user.district = district || user.district;
+  user.upazila = upazila || user.upazila;
+
+  await user.save();
+  res.json(user);
+});
+
 
 
 // ===================== SERVER =====================
