@@ -27,6 +27,42 @@ mongoose.connect(process.env.MONGO_URI, {}).then(() => {
   console.log("MongoDB Connected");
 }).catch(err => console.error(err));
 
+// ===================== MODELS =====================
+const userSchema = mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  avatar: String,
+  bloodGroup: { type: String, required: true },
+  district: { type: String, required: true },
+  upazila: { type: String, required: true },
+  role: { type: String, enum: ["donor", "volunteer", "admin"], default: "donor" },
+  status: { type: String, enum: ["active", "blocked"], default: "active" },
+}, { timestamps: true });
+const User = mongoose.model("User", userSchema);
+
+const donationRequestSchema = mongoose.Schema({
+  requester: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  recipientName: { type: String, required: true },
+  recipientDistrict: { type: String, required: true },
+  recipientUpazila: { type: String, required: true },
+  hospitalName: String,
+  address: String,
+  bloodGroup: { type: String, required: true },
+  donationDate: { type: Date, required: true },
+  donationTime: { type: String, required: true },
+  requestMessage: String,
+  status: { type: String, enum: ["pending", "inprogress", "done", "canceled"], default: "pending" },
+}, { timestamps: true });
+const DonationRequest = mongoose.model("DonationRequest", donationRequestSchema);
+
+const fundSchema = mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  userName: { type: String, required: true },
+  amount: { type: Number, required: true },
+}, { timestamps: true });
+const Fund = mongoose.model("Fund", fundSchema);
+
 
 
 // ===================== SERVER =====================
