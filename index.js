@@ -19,6 +19,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// ✅ REQUEST LOGGER - See all incoming requests
+app.use((req, res, next) => {
+  console.log(`📥 ${req.method} ${req.url}`);
+  console.log("Headers:", req.headers.authorization ? "Token Present ✅" : "No Token ❌");
+  next();
+});
+
 // Firebase Admin Initialization
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -75,33 +82,44 @@ const Fund = mongoose.model("Fund", fundSchema);
 
 // ===================== MIDDLEWARE =====================
 const protect = async (req, res, next) => {
+  console.log("🔒 Protect middleware triggered");
   let token;
   
   if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
     try {
       token = req.headers.authorization.split(" ")[1];
+      console.log("🎫 Token found:", token.substring(0, 20) + "...");
       
       if (!token) {
+        console.log("❌ No token provided");
         return res.status(401).json({ message: "No token provided" });
       }
       
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      console.log("✅ Token verified, User ID:", decoded.id);
+      
       req.user = await User.findById(decoded.id).select("-password");
       
       if (!req.user) {
+        console.log("❌ User not found in database");
         return res.status(401).json({ message: "User not found" });
       }
       
+      console.log("✅ User authenticated:", req.user.email);
+      
       if (req.user.status === "blocked") {
+        console.log("❌ User is blocked");
         return res.status(403).json({ message: "Your account has been blocked" });
       }
       
       next();
     } catch (error) {
-      console.error("Token verification error:", error);
+      console.error("❌ Token verification error:", error.message);
       return res.status(401).json({ message: "Not authorized, token failed" });
     }
   } else {
+    console.log("❌ No authorization header or invalid format");
+    console.log("Headers:", req.headers);
     return res.status(401).json({ message: "Not authorized, no token" });
   }
 };
@@ -120,6 +138,7 @@ const adminOnly = (req, res, next) => {
 // Register (Email/Password)
 app.post("/api/auth/register", async (req, res) => {
   try {
+    console.log("📝 Registration attempt:", req.body.email);
     const { uid, name, email, password, avatar, bloodGroup, district, upazila } = req.body;
     
     const userExists = await User.findOne({ email });
@@ -141,6 +160,7 @@ app.post("/api/auth/register", async (req, res) => {
     });
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    console.log("✅ User registered successfully:", email);
     
     res.status(201).json({ 
       token, 
@@ -157,7 +177,7 @@ app.post("/api/auth/register", async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Register Error:", error);
+    console.error("❌ Register Error:", error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -165,6 +185,7 @@ app.post("/api/auth/register", async (req, res) => {
 // Login (Email/Password)
 app.post("/api/auth/login", async (req, res) => {
   try {
+    console.log("🔐 Login attempt:", req.body.email);
     const { email, password } = req.body;
     
     const user = await User.findOne({ email });
@@ -182,6 +203,7 @@ app.post("/api/auth/login", async (req, res) => {
     }
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    console.log("✅ User logged in successfully:", email);
     
     res.json({ 
       token, 
@@ -198,7 +220,7 @@ app.post("/api/auth/login", async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Login Error:", error);
+    console.error("❌ Login Error:", error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -206,6 +228,7 @@ app.post("/api/auth/login", async (req, res) => {
 // Google Login
 app.post("/api/auth/google-login", async (req, res) => {
   try {
+    console.log("🔐 Google login attempt:", req.body.email);
     const { email, displayName, uid } = req.body;
 
     let user = await User.findOne({ email });
@@ -219,9 +242,11 @@ app.post("/api/auth/google-login", async (req, res) => {
         district: "Not Set",
         upazila: "Not Set",
       });
+      console.log("✅ New Google user created:", email);
     }
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    console.log("✅ Google login successful:", email);
     
     res.json({ 
       token, 
@@ -238,7 +263,7 @@ app.post("/api/auth/google-login", async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Google Login Error:", error);
+    console.error("❌ Google Login Error:", error);
     res.status(401).json({ message: "Google login failed" });
   }
 });
@@ -246,6 +271,7 @@ app.post("/api/auth/google-login", async (req, res) => {
 // ===================== DASHBOARD STATS =====================
 app.get("/api/dashboard/stats", protect, async (req, res) => {
   try {
+    console.log("📊 Fetching dashboard stats");
     const totalUsers = await User.countDocuments();
     const totalRequests = await DonationRequest.countDocuments();
     const funds = await Fund.find();
@@ -257,7 +283,7 @@ app.get("/api/dashboard/stats", protect, async (req, res) => {
       totalFunds: totalFunds.toFixed(2),
     });
   } catch (error) {
-    console.error("Dashboard stats error:", error);
+    console.error("❌ Dashboard stats error:", error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -307,7 +333,6 @@ app.patch("/api/users/:id/role", protect, adminOnly, async (req, res) => {
 // Update User Profile
 app.put("/api/users/:id", protect, async (req, res) => {
   try {
-    // Only allow user to update their own profile or admin
     if (req.user._id.toString() !== req.params.id && req.user.role !== "admin") {
       return res.status(403).json({ message: "Not authorized to update this profile" });
     }
@@ -323,6 +348,7 @@ app.put("/api/users/:id", protect, async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    console.log("✅ Profile updated:", user.email);
     res.json({
       _id: user._id,
       name: user.name,
@@ -335,17 +361,17 @@ app.put("/api/users/:id", protect, async (req, res) => {
       status: user.status
     });
   } catch (error) {
-    console.error("Update profile error:", error);
+    console.error("❌ Update profile error:", error);
     res.status(500).json({ message: error.message });
   }
 });
 
 // ===================== DONATION REQUEST ROUTES =====================
-// ⚠️ IMPORTANT: /my route MUST come BEFORE /:id route
 
 // Get My Donation Requests (with pagination) - MUST BE FIRST
 app.get("/api/donation-requests/my", protect, async (req, res) => {
   try {
+    console.log("📋 Fetching my donation requests for:", req.user.email);
     const page = parseInt(req.query.page) || 1;
     const limit = 10;
     const skip = (page - 1) * limit;
@@ -361,13 +387,15 @@ app.get("/api/donation-requests/my", protect, async (req, res) => {
       .skip(skip)
       .limit(limit);
 
+    console.log(`✅ Found ${requests.length} requests (Page ${page}/${Math.ceil(total / limit)})`);
+
     res.json({
       requests,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
     });
   } catch (error) {
-    console.error("Get my requests error:", error);
+    console.error("❌ Get my requests error:", error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -382,6 +410,7 @@ app.get("/api/donation-requests", async (req, res) => {
     if (district) filter.recipientDistrict = district;
 
     const requests = await DonationRequest.find(filter).sort({ createdAt: -1 });
+    console.log(`✅ Found ${requests.length} donation requests`);
     res.json(requests);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -404,14 +433,16 @@ app.get("/api/donation-requests/:id", async (req, res) => {
 // Create Donation Request
 app.post("/api/donation-requests", protect, async (req, res) => {
   try {
+    console.log("➕ Creating donation request by:", req.user.email);
     const request = await DonationRequest.create({
       ...req.body,
       requesterName: req.user.name,
       requesterEmail: req.user.email,
     });
+    console.log("✅ Donation request created:", request._id);
     res.status(201).json(request);
   } catch (error) {
-    console.error("Create request error:", error);
+    console.error("❌ Create request error:", error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -433,6 +464,7 @@ app.put("/api/donation-requests/:id", protect, async (req, res) => {
       req.body,
       { new: true }
     );
+    console.log("✅ Donation request updated:", updated._id);
     res.json(updated);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -452,6 +484,7 @@ app.delete("/api/donation-requests/:id", protect, async (req, res) => {
     }
 
     await DonationRequest.findByIdAndDelete(req.params.id);
+    console.log("✅ Donation request deleted:", req.params.id);
     res.json({ message: "Request deleted" });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -471,6 +504,7 @@ app.post("/api/donation-requests/:id/donate", protect, async (req, res) => {
       },
       { new: true }
     );
+    console.log("✅ Donation accepted:", request._id);
     res.json(request);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -498,6 +532,7 @@ app.post("/api/funds", protect, async (req, res) => {
       userEmail: req.user.email,
       amount: parseFloat(amount),
     });
+    console.log("✅ Fund given:", amount);
     res.status(201).json(fund);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -524,9 +559,13 @@ app.get("/api/donors/search", async (req, res) => {
 });
 
 // ===================== ERROR HANDLING =====================
-app.use((req, res) => res.status(404).json({ message: `Not Found - ${req.originalUrl}` }));
+app.use((req, res) => {
+  console.log("❌ 404 Not Found:", req.originalUrl);
+  res.status(404).json({ message: `Not Found - ${req.originalUrl}` });
+});
+
 app.use((err, req, res, next) => {
-  console.error("Global error:", err);
+  console.error("❌ Global error:", err);
   const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
   res.status(statusCode).json({ 
     message: err.message, 
