@@ -22,7 +22,10 @@ app.use(express.json());
 // ✅ REQUEST LOGGER - See all incoming requests
 app.use((req, res, next) => {
   console.log(`📥 ${req.method} ${req.url}`);
-  console.log("Headers:", req.headers.authorization ? "Token Present ✅" : "No Token ❌");
+  console.log(
+    "Headers:",
+    req.headers.authorization ? "Token Present ✅" : "No Token ❌"
+  );
   next();
 });
 
@@ -32,86 +35,112 @@ admin.initializeApp({
 });
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGO_URI)
+mongoose
+  .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected"))
-  .catch(err => console.error("❌ MongoDB Error:", err));
+  .catch((err) => console.error("❌ MongoDB Error:", err));
 
 // ===================== MODELS =====================
 
 // User Model
-const userSchema = mongoose.Schema({
-  uid: String,
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  password: String,
-  avatar: String,
-  bloodGroup: String,
-  district: String,
-  upazila: String,
-  role: { type: String, enum: ["donor", "volunteer", "admin"], default: "donor" },
-  status: { type: String, enum: ["active", "blocked"], default: "active" },
-}, { timestamps: true });
+const userSchema = mongoose.Schema(
+  {
+    uid: String,
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    password: String,
+    avatar: String,
+    bloodGroup: String,
+    district: String,
+    upazila: String,
+    role: {
+      type: String,
+      enum: ["donor", "volunteer", "admin"],
+      default: "donor",
+    },
+    status: { type: String, enum: ["active", "blocked"], default: "active" },
+  },
+  { timestamps: true }
+);
 const User = mongoose.model("User", userSchema);
 
 // Donation Request Model
-const donationRequestSchema = mongoose.Schema({
-  requesterName: { type: String, required: true },
-  requesterEmail: { type: String, required: true },
-  recipientName: { type: String, required: true },
-  recipientDistrict: { type: String, required: true },
-  recipientUpazila: { type: String, required: true },
-  hospitalName: { type: String, required: true },
-  fullAddress: { type: String, required: true },
-  bloodGroup: { type: String, required: true },
-  date: { type: String, required: true },
-  time: { type: String, required: true },
-  requestMessage: String,
-  status: { type: String, enum: ["pending", "inprogress", "done", "canceled"], default: "pending" },
-  donorName: String,
-  donorEmail: String,
-}, { timestamps: true });
-const DonationRequest = mongoose.model("DonationRequest", donationRequestSchema);
+const donationRequestSchema = mongoose.Schema(
+  {
+    requesterName: { type: String, required: true },
+    requesterEmail: { type: String, required: true },
+    recipientName: { type: String, required: true },
+    recipientDistrict: { type: String, required: true },
+    recipientUpazila: { type: String, required: true },
+    hospitalName: { type: String, required: true },
+    fullAddress: { type: String, required: true },
+    bloodGroup: { type: String, required: true },
+    date: { type: String, required: true },
+    time: { type: String, required: true },
+    requestMessage: String,
+    status: {
+      type: String,
+      enum: ["pending", "inprogress", "done", "canceled"],
+      default: "pending",
+    },
+    donorName: String,
+    donorEmail: String,
+  },
+  { timestamps: true }
+);
+const DonationRequest = mongoose.model(
+  "DonationRequest",
+  donationRequestSchema
+);
 
 // Fund Model
-const fundSchema = mongoose.Schema({
-  userName: { type: String, required: true },
-  userEmail: { type: String, required: true },
-  amount: { type: Number, required: true },
-}, { timestamps: true });
+const fundSchema = mongoose.Schema(
+  {
+    userName: { type: String, required: true },
+    userEmail: { type: String, required: true },
+    amount: { type: Number, required: true },
+  },
+  { timestamps: true }
+);
 const Fund = mongoose.model("Fund", fundSchema);
 
 // ===================== MIDDLEWARE =====================
 const protect = async (req, res, next) => {
   console.log("🔒 Protect middleware triggered");
   let token;
-  
-  if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
+
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer")
+  ) {
     try {
       token = req.headers.authorization.split(" ")[1];
       console.log("🎫 Token found:", token.substring(0, 20) + "...");
-      
+
       if (!token) {
         console.log("❌ No token provided");
         return res.status(401).json({ message: "No token provided" });
       }
-      
+
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       console.log("✅ Token verified, User ID:", decoded.id);
-      
+
       req.user = await User.findById(decoded.id).select("-password");
-      
+
       if (!req.user) {
         console.log("❌ User not found in database");
         return res.status(401).json({ message: "User not found" });
       }
-      
+
       console.log("✅ User authenticated:", req.user.email);
-      
+
       if (req.user.status === "blocked") {
         console.log("❌ User is blocked");
-        return res.status(403).json({ message: "Your account has been blocked" });
+        return res
+          .status(403)
+          .json({ message: "Your account has been blocked" });
       }
-      
+
       next();
     } catch (error) {
       console.error("❌ Token verification error:", error.message);
@@ -139,42 +168,56 @@ const adminOnly = (req, res, next) => {
 app.post("/api/auth/register", async (req, res) => {
   try {
     console.log("📝 Registration attempt:", req.body.email);
-    const { uid, name, email, password, avatar, bloodGroup, district, upazila } = req.body;
-    
+    const {
+      uid,
+      name,
+      email,
+      password,
+      avatar,
+      bloodGroup,
+      district,
+      upazila,
+    } = req.body;
+
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    const hashedPassword = password ? await bcrypt.hash(password, 10) : undefined;
-    
-    const user = await User.create({ 
+    const hashedPassword = password
+      ? await bcrypt.hash(password, 10)
+      : undefined;
+
+    const user = await User.create({
       uid,
-      name, 
-      email, 
-      password: hashedPassword, 
-      avatar, 
-      bloodGroup, 
-      district, 
-      upazila 
+      name,
+      email,
+      password: hashedPassword,
+      avatar,
+      bloodGroup,
+      district,
+      upazila,
     });
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
     console.log("✅ User registered successfully:", email);
-    
-    res.status(201).json({ 
-      token, 
+
+    res.status(201).json({
+      token,
       user: {
         _id: user._id,
         name: user.name,
         email: user.email,
+        password: user.password,
         avatar: user.avatar,
         bloodGroup: user.bloodGroup,
         district: user.district,
         upazila: user.upazila,
         role: user.role,
-        status: user.status
-      }
+        status: user.status,
+      },
     });
   } catch (error) {
     console.error("❌ Register Error:", error);
@@ -187,7 +230,7 @@ app.post("/api/auth/login", async (req, res) => {
   try {
     console.log("🔐 Login attempt:", req.body.email);
     const { email, password } = req.body;
-    
+
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
@@ -202,11 +245,13 @@ app.post("/api/auth/login", async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
     console.log("✅ User logged in successfully:", email);
-    
-    res.json({ 
-      token, 
+
+    res.json({
+      token,
       user: {
         _id: user._id,
         name: user.name,
@@ -216,8 +261,8 @@ app.post("/api/auth/login", async (req, res) => {
         district: user.district,
         upazila: user.upazila,
         role: user.role,
-        status: user.status
-      }
+        status: user.status,
+      },
     });
   } catch (error) {
     console.error("❌ Login Error:", error);
@@ -232,7 +277,7 @@ app.post("/api/auth/google-login", async (req, res) => {
     const { email, displayName, uid } = req.body;
 
     let user = await User.findOne({ email });
-    
+
     if (!user) {
       user = await User.create({
         uid,
@@ -245,11 +290,13 @@ app.post("/api/auth/google-login", async (req, res) => {
       console.log("✅ New Google user created:", email);
     }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
     console.log("✅ Google login successful:", email);
-    
-    res.json({ 
-      token, 
+
+    res.json({
+      token,
       user: {
         _id: user._id,
         name: user.name,
@@ -259,8 +306,8 @@ app.post("/api/auth/google-login", async (req, res) => {
         district: user.district,
         upazila: user.upazila,
         role: user.role,
-        status: user.status
-      }
+        status: user.status,
+      },
     });
   } catch (error) {
     console.error("❌ Google Login Error:", error);
@@ -305,8 +352,8 @@ app.patch("/api/users/:id/status", protect, adminOnly, async (req, res) => {
   try {
     const { status } = req.body;
     const user = await User.findByIdAndUpdate(
-      req.params.id, 
-      { status }, 
+      req.params.id,
+      { status },
       { new: true }
     ).select("-password");
     res.json(user);
@@ -320,8 +367,8 @@ app.patch("/api/users/:id/role", protect, adminOnly, async (req, res) => {
   try {
     const { role } = req.body;
     const user = await User.findByIdAndUpdate(
-      req.params.id, 
-      { role }, 
+      req.params.id,
+      { role },
       { new: true }
     ).select("-password");
     res.json(user);
@@ -333,8 +380,13 @@ app.patch("/api/users/:id/role", protect, adminOnly, async (req, res) => {
 // Update User Profile
 app.put("/api/users/:id", protect, async (req, res) => {
   try {
-    if (req.user._id.toString() !== req.params.id && req.user.role !== "admin") {
-      return res.status(403).json({ message: "Not authorized to update this profile" });
+    if (
+      req.user._id.toString() !== req.params.id &&
+      req.user.role !== "admin"
+    ) {
+      return res
+        .status(403)
+        .json({ message: "Not authorized to update this profile" });
     }
 
     const { name, bloodGroup, district, upazila, avatar } = req.body;
@@ -343,7 +395,7 @@ app.put("/api/users/:id", protect, async (req, res) => {
       { name, bloodGroup, district, upazila, avatar },
       { new: true }
     ).select("-password");
-    
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -353,12 +405,13 @@ app.put("/api/users/:id", protect, async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
+      password: user.Password,
       avatar: user.avatar,
       bloodGroup: user.bloodGroup,
       district: user.district,
       upazila: user.upazila,
       role: user.role,
-      status: user.status
+      status: user.status,
     });
   } catch (error) {
     console.error("❌ Update profile error:", error);
@@ -376,18 +429,22 @@ app.get("/api/donation-requests/my", protect, async (req, res) => {
     const limit = 10;
     const skip = (page - 1) * limit;
 
-    const total = await DonationRequest.countDocuments({ 
-      requesterEmail: req.user.email 
+    const total = await DonationRequest.countDocuments({
+      requesterEmail: req.user.email,
     });
-    
-    const requests = await DonationRequest.find({ 
-      requesterEmail: req.user.email 
+
+    const requests = await DonationRequest.find({
+      requesterEmail: req.user.email,
     })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    console.log(`✅ Found ${requests.length} requests (Page ${page}/${Math.ceil(total / limit)})`);
+    console.log(
+      `✅ Found ${requests.length} requests (Page ${page}/${Math.ceil(
+        total / limit
+      )})`
+    );
 
     res.json({
       requests,
@@ -455,7 +512,10 @@ app.put("/api/donation-requests/:id", protect, async (req, res) => {
       return res.status(404).json({ message: "Request not found" });
     }
 
-    if (request.requesterEmail !== req.user.email && req.user.role !== "admin") {
+    if (
+      request.requesterEmail !== req.user.email &&
+      req.user.role !== "admin"
+    ) {
       return res.status(403).json({ message: "Not authorized" });
     }
 
@@ -479,7 +539,10 @@ app.delete("/api/donation-requests/:id", protect, async (req, res) => {
       return res.status(404).json({ message: "Request not found" });
     }
 
-    if (request.requesterEmail !== req.user.email && req.user.role !== "admin") {
+    if (
+      request.requesterEmail !== req.user.email &&
+      req.user.role !== "admin"
+    ) {
       return res.status(403).json({ message: "Not authorized" });
     }
 
@@ -497,10 +560,10 @@ app.post("/api/donation-requests/:id/donate", protect, async (req, res) => {
     const { donorName, donorEmail } = req.body;
     const request = await DonationRequest.findByIdAndUpdate(
       req.params.id,
-      { 
+      {
         status: "inprogress",
         donorName,
-        donorEmail 
+        donorEmail,
       },
       { new: true }
     );
@@ -546,7 +609,7 @@ app.get("/api/donors/search", async (req, res) => {
   try {
     const { bloodGroup, district, upazila } = req.query;
     const filter = { status: "active" };
-    
+
     if (bloodGroup) filter.bloodGroup = bloodGroup;
     if (district) filter.district = new RegExp(district, "i");
     if (upazila) filter.upazila = new RegExp(upazila, "i");
@@ -567,9 +630,9 @@ app.use((req, res) => {
 app.use((err, req, res, next) => {
   console.error("❌ Global error:", err);
   const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
-  res.status(statusCode).json({ 
-    message: err.message, 
-    stack: process.env.NODE_ENV === "production" ? null : err.stack 
+  res.status(statusCode).json({
+    message: err.message,
+    stack: process.env.NODE_ENV === "production" ? null : err.stack,
   });
 });
 
