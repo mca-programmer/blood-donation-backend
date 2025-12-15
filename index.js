@@ -10,12 +10,6 @@ import path from "path";
 
 dotenv.config();
 
-// Firebase service account
-// const serviceAccount = JSON.parse(
-//   fs.readFileSync(path.resolve("./firebaseServiceAccountKey.json"))
-// );
-
-// const serviceAccount = require("./firebase-admin-key.json");
 
 const decoded = Buffer.from(process.env.FB_SERVICE_KEY, 'base64').toString('utf8')
 const serviceAccount = JSON.parse(decoded);
@@ -165,6 +159,11 @@ const adminOnly = (req, res, next) => {
     res.status(403).json({ message: "Admin access required" });
   }
 };
+// ===================== ROUTES =====================
+
+// Health Check
+app.get("/", (req, res) => res.send("Blood Donation Backend Running 🚀"));
+
 
 // ===================== AUTH ROUTES =====================
 
