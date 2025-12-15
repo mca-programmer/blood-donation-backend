@@ -11,10 +11,14 @@ import path from "path";
 dotenv.config();
 
 // Firebase service account
-const serviceAccount = JSON.parse(
-  fs.readFileSync(path.resolve("./firebaseServiceAccountKey.json"))
-);
+// const serviceAccount = JSON.parse(
+//   fs.readFileSync(path.resolve("./firebaseServiceAccountKey.json"))
+// );
 
+// const serviceAccount = require("./firebase-admin-key.json");
+
+const decoded = Buffer.from(process.env.FB_SERVICE_KEY, 'base64').toString('utf8')
+const serviceAccount = JSON.parse(decoded);
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -636,6 +640,12 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ===================== SERVER =====================
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+// ================== LOCAL SERVER ==================
+if (process.env.NODE_ENV !== "production") {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+}
+
+// ================== EXPORT FOR VERCEL ==================
+export default app;
