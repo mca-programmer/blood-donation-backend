@@ -313,7 +313,7 @@ Lives Saved            : Countless ❤️
 **Project Maintainer:** MCA Programmer
 
 [![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/mca-programmer)
-[![Email](https://img.shields.io/badge/Email-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:your-email@example.com)
+[![Email](https://img.shields.io/badge/Email-D14836?style=for-the-badge&logo=gmail&logoColor=white)](freelancermca52@gmail.com)
 
 ### Need Help?
 
@@ -333,7 +333,7 @@ Ei project **MIT License** er under e licensed.
 ```
 MIT License
 
-Copyright (c) 2024 MCA Programmer
+Copyright (c) 2026 MCA Programmer
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -347,13 +347,13 @@ in the Software without restriction...
 - 💙 Sob blood donors jara niswarthobhabe donate koren
 - 🏥 Healthcare workers jara ei cause e support koren
 - 👨‍💻 Open source community
-- ⭐ All contributors ebong supporters
+- ⭐ All contributors and supporters
 
 ---
 
 <div align="center">
 
-### ⭐ Star this repo jodi apnar helpful lage!
+### ⭐ Star this repo Jodi apnar helpful lage!
 
 **Rokto Din, Jibon Bachan** 🩸❤️
 
@@ -363,6 +363,7 @@ Made with ❤️ by [MCA Programmer](https://github.com/mca-programmer)
 
 <img src="https://user-images.githubusercontent.com/74038190/212284158-e840e285-664b-44d7-b79b-e264b5e54825.gif" width="400">
 
-**© 2024 Blood Donation Backend. All Rights Reserved.**
+**© 2026 Blood Donation Backend. All Rights Reserved.**
 
 </div>
+
